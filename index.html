@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Device Verification</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  body, html {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #0074ff;
+    transition: background 1s ease;
+    overflow: hidden;
+  }
+
+  .container {
+    text-align: center;
+    color: white;
+    padding: 20px;
+    max-width: 500px;
+    width: 90%;
+  }
+
+  .bot-info {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+  }
+
+  .bot-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+
+  .bot-id {
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+
+  .loading-text {
+    font-size: 22px;
+    margin-bottom: 40px;
+    animation: blink 1.2s infinite;
+  }
+
+  @keyframes blink {
+    0%,100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+
+  .round-loader {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 40px;
+  }
+
+  .round-line {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top: 3px solid white;
+    animation: spin 1.5s linear infinite;
+  }
+
+  .round-line:nth-child(1) {
+    animation-delay: 0s;
+    border-top-color: rgba(255, 255, 255, 1);
+  }
+
+  .round-line:nth-child(2) {
+    animation-delay: 0.2s;
+    border-top-color: rgba(255, 255, 255, 0.8);
+    width: 90%;
+    height: 90%;
+    top: 5%;
+    left: 5%;
+  }
+
+  .round-line:nth-child(3) {
+    animation-delay: 0.4s;
+    border-top-color: rgba(255, 255, 255, 0.6);
+    width: 80%;
+    height: 80%;
+    top: 10%;
+    left: 10%;
+  }
+
+  .round-line:nth-child(4) {
+    animation-delay: 0.6s;
+    border-top-color: rgba(255, 255, 255, 0.4);
+    width: 70%;
+    height: 70%;
+    top: 15%;
+    left: 15%;
+  }
+
+  .round-line:nth-child(5) {
+    animation-delay: 0.8s;
+    border-top-color: rgba(255, 255, 255, 0.2);
+    width: 60%;
+    height: 60%;
+    top: 20%;
+    left: 20%;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .message {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 25px;
+    line-height: 1.4;
+  }
+
+  .btn {
+    padding: 12px 35px;
+    font-size: 18px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    color: white;
+    background: #00ff5a;
+    transition: 0.3s;
+    margin: 10px;
+  }
+
+  .btn:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+
+  .btn-red {
+    background: #ff3c3c;
+  }
+
+  .btn-orange {
+    background: #ff9500;
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="container" id="main">
+  <div class="bot-info" id="botInfo">
+    <div class="bot-name" id="botName">Verifying Device...</div>
+    <div class="bot-id" id="botId">Bot ID: Loading...</div>
+  </div>
+  
+  <div class="loading-text">🔍 Verifying Your Device...</div>
+  
+  <div class="round-loader">
+    <div class="round-line"></div>
+    <div class="round-line"></div>
+    <div class="round-line"></div>
+    <div class="round-line"></div>
+    <div class="round-line"></div>
+  </div>
+</div>
+
+<script>
+// Prevent any imports or external access
+if (window !== top) {
+  window.top.location = window.location;
+}
+
+// Get URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+const webhookUrl = urlParams.get('webhookUrl');
+const botId = urlParams.get('botId') || 'unknown';
+
+// Update bot info display
+if (botId && botId !== 'unknown') {
+  document.getElementById('botName').textContent = `Verifying for: ${botId}`;
+  document.getElementById('botId').textContent = `Bot ID: ${botId}`;
+}
+
+// Generate device fingerprint
+function generateDeviceFingerprint() {
+  const components = [
+    navigator.userAgent,
+    navigator.language,
+    screen.colorDepth,
+    screen.width + 'x' + screen.height,
+    new Date().getTimezoneOffset(),
+    !!navigator.javaEnabled(),
+    navigator.hardwareConcurrency || 'unknown'
+  ].join('|');
+  
+  let hash = 0;
+  for (let i = 0; i < components.length; i++) {
+    const char = components.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+// Detect VPN
+async function detectVPN() {
+  try {
+    const vpnIndicators = [
+      navigator.webdriver,
+      window.phantom,
+      window._phantom,
+      window.callPhantom
+    ];
+    
+    return vpnIndicators.some(indicator => indicator !== undefined);
+  } catch (error) {
+    return false;
+  }
+}
+
+// Check if same device (per bot)
+function checkSameDevice(userHash, currentBotId) {
+  const key = `verified_devices_${currentBotId}`;
+  const existingDevices = JSON.parse(localStorage.getItem(key) || '[]');
+  return existingDevices.includes(userHash);
+}
+
+// Main verification function
+async function performVerification() {
+  await new Promise(resolve => setTimeout(resolve, 4000));
+  
+  const userHash = generateDeviceFingerprint();
+  const isVPN = await detectVPN();
+  const isSameDevice = checkSameDevice(userHash, botId);
+  
+  return {
+    user_hash: userHash,
+    captcha: "true",
+    vpn: isVPN.toString(),
+    is_same_device: isSameDevice,
+    bot_id: botId
+  };
+}
+
+// Start verification process
+setTimeout(async () => {
+  try {
+    const verificationData = await performVerification();
+    showResult(verificationData);
+  } catch (error) {
+    showError();
+  }
+}, 500);
+
+function showResult(data) {
+  const main = document.getElementById("main");
+  
+  let message = document.createElement("div");
+  message.className = "message";
+
+  let button = document.createElement("button");
+  button.className = "btn";
+
+  // Prepare result data
+  const resultData = {
+    results: {
+      user_hash: data.user_hash,
+      captcha: data.is_same_device ? "true" : "true",
+      vpn: data.vpn
+    }
+  };
+
+  if (data.vpn === "true") {
+    document.body.style.background = "red";
+    message.textContent = "🚫 VPN Detected - Access Denied";
+    button.textContent = "Exit";
+    button.className = "btn btn-red";
+    button.onclick = () => {
+      // Send VPN result
+      resultData.results.captcha = "false";
+      sendResult(resultData);
+    };
+  } else if (data.is_same_device) {
+    document.body.style.background = "orange";
+    message.innerHTML = "⚠️ Same Device Detected<br><small>You can still refer & earn!</small>";
+    button.textContent = "Continue";
+    button.className = "btn btn-orange";
+    button.onclick = () => {
+      // Send same device result
+      sendResult(resultData);
+    };
+  } else {
+    document.body.style.background = "green";
+    message.textContent = "✅ Device Verified Successfully!";
+    button.textContent = "Continue";
+    button.onclick = () => {
+      // Save device for this specific bot
+      const key = `verified_devices_${botId}`;
+      const existingDevices = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!existingDevices.includes(data.user_hash)) {
+        existingDevices.push(data.user_hash);
+        localStorage.setItem(key, JSON.stringify(existingDevices));
+      }
+      
+      // Send verified result
+      sendResult(resultData);
+    };
+  }
+
+  main.innerHTML = "";
+  main.appendChild(message);
+  main.appendChild(button);
+  
+  // Update bot info in result view
+  const botInfo = document.createElement('div');
+  botInfo.className = 'bot-info';
+  botInfo.innerHTML = `
+    <div class="bot-name">Bot: ${botId}</div>
+    <div class="bot-id">Device ID: ${data.user_hash.substring(0, 8)}...</div>
+  `;
+  main.appendChild(botInfo);
+}
+
+// Function to send result back
+function sendResult(data) {
+  // For Telegram Web Apps
+  if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.sendData(JSON.stringify(data));
+    window.Telegram.WebApp.close();
+  } 
+  // For iframe or popup scenarios
+  else if (window.opener) {
+    window.opener.postMessage(data, '*');
+    window.close();
+  }
+  // If webhook URL provided, send via fetch
+  else if (webhookUrl) {
+    fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(() => {
+      if (window.opener) {
+        window.close();
+      }
+    })
+    .catch(() => {
+      if (window.opener) {
+        window.close();
+      }
+    });
+  }
+  // For direct browser testing
+  else {
+    console.log('Verification Result:', data);
+    alert('Verification complete! Data: ' + JSON.stringify(data));
+    if (window.opener) {
+      window.close();
+    }
+  }
+}
+
+function showError() {
+  const main = document.getElementById("main");
+  document.body.style.background = "red";
+  
+  main.innerHTML = `
+    <div class="message">❌ Verification Failed</div>
+    <button class="btn btn-red" onclick="window.location.reload()">Try Again</button>
+  `;
+}
+
+// For Telegram Web Apps integration
+if (window.Telegram && window.Telegram.WebApp) {
+  Telegram.WebApp.ready();
+  Telegram.WebApp.expand();
+}
+</script>
+</body>
+</html>
